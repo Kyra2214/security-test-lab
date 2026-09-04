@@ -1,0 +1,59 @@
+name: security-test-lab
+
+services:
+  target:
+    image: security-test-lab/target:local
+    build:
+      context: ../target
+    networks:
+      - stl-isolated
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid,nodev
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.securitytestlab: "true"
+      securitytestlab.owner: SecurityTestLab
+      securitytestlab.role: target
+
+  runner:
+    image: security-test-lab/runner:local
+    build:
+      context: ../runner
+    depends_on:
+      - target
+    networks:
+      - stl-isolated
+    environment:
+      TARGET_BASE_URL: http://target:8080
+      STL_NETWORK_MODE: isolated
+      STL_EXTERNAL_NETWORK: "false"
+      STL_SYNTHETIC_CANARIES_ONLY: "true"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,noexec,nosuid,nodev
+    mem_limit: 1g
+    cpus: 2.0
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      com.securitytestlab: "true"
+      securitytestlab.owner: SecurityTestLab
+      securitytestlab.role: runner
+
+networks:
+  stl-isolated:
+    name: securitytestlab-isolated
+    driver: bridge
+    internal: true
+    labels:
+      com.securitytestlab: "true"
+      securitytestlab.owner: SecurityTestLab
+      securitytestlab.role: network
